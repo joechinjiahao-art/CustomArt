@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Motion Graphics & Art Studio</title>
+    <style>
+        :root {
+            --bg-main: #0f0f11;
+            --bg-panel: #18181c;
+            --bg-input: #22222a;
+            --accent: #2563eb;
+            --accent-hover: #3b82f6;
+            --text: #f3f4f6;
+            --text-dim: #9ca3af;
+            --border: #2e2e38;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text);
+            display: flex; height: 100vh; overflow: hidden;
+        }
+
+        /* Sidebar UI */
+        #sidebar {
+            width: 380px; background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            box-sizing: border-box; z-index: 10;
+        }
+
+        .scroll-container {
+            flex-grow: 1; overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; gap: 18px;
+        }
+
+        h1 { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.5px; }
+        h2 { margin: 0 0 8px 0; font-size: 0.8rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+        p { margin: 0; font-size: 0.8rem; color: var(--text-dim); line-height: 1.4; }
+
+        .control-group {
+            background: rgba(0,0,0,0.2); padding: 14px; border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; color: #cbd5e1; }
+        
+        select, input[type="text"] {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+            color: var(--text); padding: 8px; border-radius: 6px; font-size: 0.85rem;
+            box-sizing: border-box; outline: none;
+        }
+        select:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+        .tool-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none; border: none; width: 100%; height: 36px;
+            border-radius: 6px; cursor: pointer; background: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 6px; }
+
+        input[type="range"] { width: 100%; margin: 6px 0; accent-color: var(--accent); }
+
+        .btn {
+            background-color: var(--accent); color: white; border: none;
+            padding: 10px 14px; border-radius: 6px; font-weight: 600;
+            cursor: pointer; transition: background 0.15s; font-size: 0.85rem;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-secondary:hover { background: var(--bg-input); border-color: var(--text-dim); }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #ef4444; }
+        .btn:disabled { background: #4b5563; cursor: not-allowed; opacity: 0.5; }
+
+        .btn-stack { display: flex; flex-direction: column; gap: 8px; }
+
+        .file-label {
+            display: block; text-align: center; background: var(--bg-input);
+            border: 1px dashed var(--border); padding: 10px; border-radius: 6px;
+            cursor: pointer; font-size: 0.85rem;
+        }
+        input[type="file"] { display: none; }
+
+        /* Dynamic Layer System CSS */
+        .layer-item {
+            background: var(--bg-input); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; margin-bottom: 8px;
+            transition: all 0.15s;
+        }
+        .layer-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .layer-main-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .layer-name { font-size: 0.85rem; font-weight: 600; cursor: pointer; flex-grow: 1; }
+        .layer-actions { display: flex; gap: 4px; }
+        .layer-dropdown-container { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; margin-top: 4px; }
+        .layer-dropdown-container label { font-size: 0.75rem; color: var(--text-dim); }
+
+        /* Workspace Canvas Wrapper Frame */
+        #workspace {
+            flex-grow: 1; display: flex; justify-content: center; align-items: center;
+            background: #0b0b0d; position: relative; padding: 20px;
+        }
+
+        #canvas-frame {
+            width: 393px; height: 852px; /* Emulated High-End Native iOS Display Aspect Scale */
+            background: #ffffff; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+            position: relative; border-radius: 46px; overflow: hidden;
+            border: 8px solid #222226;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+
+        #recording-indicator {
+            position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+            background: #dc2626; color: white; padding: 6px 16px;
+            border-radius: 9999px; font-size: 0.75rem; font-weight: 700;
+            display: none; box-shadow: 0 4px 12px rgba(220,38,38,0.4); letter-spacing: 0.5px;
+        }
+
+        .footer-credit { padding: 15px 20px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="scroll-container">
+            <div>
+                <h1>Art & Motion Studio Pro</h1>
+                <p>Design using rich brush tools and customize individual layer behaviors to control your animation's timeline.</p>
+            </div>
+
+            <!-- Background Properties -->
+            <div class="control-group">
+                <h2>1. Canvas Wallpaper Background</h2>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                    <div style="flex-grow:1;">
+                        <input type="color" id="bgColorPicker" value="#ffffff" onchange="updateBackgroundSettings()">
+                    </div>
+                </div>
+                <label class="file-label" for="bgImageInput">🖼️ Upload Image Background</label>
+                <input type="file" id="bgImageInput" accept="image/*" onchange="handleBackgroundImageUpload()">
+            </div>
+
+            <!-- Enhanced Brush Tool Engine Selection Elements -->
+            <div class="control-group">
+                <h2>2. Graphic Brush Engine</h2>
+                <label>Select Active Art Tool</label>
+                <div class="tool-grid">
+                    <button id="tool-line" class="btn" onclick="setActiveToolStyle('line')">✒️ Smooth Line</button>
+                    <button id="tool-brush" class="btn btn-secondary" onclick="setActiveToolStyle('brush')">🖌️ Taper Brush</button>
+                    <button id="tool-sketch" class="btn btn-secondary" onclick="setActiveToolStyle('sketch')">✏️ Sketch Pencil</button>
+                    <button id="tool-airbrush" class="btn btn-secondary" onclick="setActiveToolStyle('airbrush')">💨 Airbrush Shading</button>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <label>Color Asset</label>
+                    <input type="color" id="brushColorPicker" value="#111111" onchange="refreshMasterCanvasDisplay(); autoSaveWorkspaceData();">
+                </div>
+                <div style="margin-bottom:8px;">
+                    <label id="brushSizeLabel">Size: 6px</label>
+                    <input type="range" id="brushSizeSlider" min="1" max="80" value="6" oninput="updateBrushLabels()">
+                </div>
+                <div>
+                    <label id="brushOpacityLabel">Opacity: 100%</label>
+                    <input type="range" id="brushOpacitySlider" min="1" max="100" value="100" oninput="updateBrushLabels()">
+                </div>
+            </div>
+
+            <!-- Dynamic Customized Layer Hierarchy Panel -->
+            <div class="control-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2>3. Layers & Timeline Logic</h2>
+                    <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="addNewLayer()">+ Create Layer</button>
+                </div>
+                <div id="layerStackContainer">
+                    <!-- Layer nodes generated procedurally inside Javascript execution loops -->
+                </div>
+            </div>
+
+            <!-- Utility Controls -->
+            <div class="control-group">
+                <h2>4. Maintenance Tools</h2>
+                <div class="btn-stack">
+                    <button class="btn btn-secondary btn-danger" onclick="clearActiveLayerStrokes()">Clear Active Layer</button>
+                    <button class="btn btn-secondary" onclick="resetEntireStudioWorkspace()">Reset Workspace Canvas</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-credit">
+            <button id="renderExportBtn" class="btn" style="width:100%; padding:14px;" onclick="compileAndExportMotionGraphics()">🎬 Export Wallpaper Video</button>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <div id="canvas-frame">
+            <canvas id="studioCanvas"></canvas>
+            <div id="recording-indicator">🔴 RENDERING GRAPHICS STACKS</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('studioCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const WIDTH = 786;
+        const HEIGHT = 1704;
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        // Application State
+        let studioLayers = [
+            { id: 'layer_1', name: 'Outline Layer', strokes: [], visible: true, behavior: 'trace' },
+            { id: 'layer_2', name: 'Awakening Details', strokes: [], visible: true, behavior: 'awaken' }
+        ];
+        let activeLayerId = 'layer_1';
+        let currentSelectedToolType = 'line'; 
+        let isDrawing = false;
+        let activeInputPoints = [];
+
+        let canvasBgColor = '#ffffff';
+        let canvasBgImageElement = null;
+        let canvasBgImageRawBase64 = null; // Tracked exclusively to handle auto-save pipeline serialization
+
+        // Auto Save Workspace Configuration Matrix
+        function autoSaveWorkspaceData() {
+            try {
+                const sessionObject = {
+                    studioLayers: studioLayers,
+                    canvasBgColor: canvasBgColor,
+                    activeLayerId: activeLayerId,
+                    currentSelectedToolType: currentSelectedToolType,
+                    canvasBgImageRawBase64: canvasBgImageRawBase64
+                };
+                localStorage.setItem('art_studio_autosave_data', JSON.stringify(sessionObject));
+            } catch (error) {
+                console.error("Auto save payload threshold exceeded configuration size limits:", error);
+            }
+        }
+
+        function tryLoadWorkspaceAutosave() {
+            const rawJson = localStorage.getItem('art_studio_autosave_data');
+            if (!rawJson) return false;
+            try {
+                const parsed = JSON.parse(rawJson);
+                studioLayers = parsed.studioLayers || studioLayers;
+                canvasBgColor = parsed.canvasBgColor || canvasBgColor;
+                activeLayerId = parsed.activeLayerId || activeLayerId;
+                currentSelectedToolType = parsed.currentSelectedToolType || currentSelectedToolType;
+                canvasBgImageRawBase64 = parsed.canvasBgImageRawBase64 || null;
+
+                document.getElementById('bgColorPicker').value = canvasBgColor;
+
+                if (canvasBgImageRawBase64) {
+                    const img = new Image();
+                    img.onload = function() {
+                        canvasBgImageElement = img;
+                        refreshMasterCanvasDisplay();
+                    };
+                    img.src = canvasBgImageRawBase64;
+                }
+                return true;
+            } catch (err) {
+                console.error("Failed to restore canvas snapshot layout:", err);
+                return false;
+            }
+        }
+
+        function initStudio() {
+            const wasRestored = tryLoadWorkspaceAutosave();
+            setActiveToolStyle(currentSelectedToolType);
+            renderLayerControlPanelUI();
+            updateBrushLabels();
+            refreshMasterCanvasDisplay();
+        }
+
+        function updateBrushLabels() {
+            document.getElementById('brushSizeLabel').innerText = `Size: ${document.getElementById('brushSizeSlider').value}px`;
+            document.getElementById('brushOpacityLabel').innerText = `Opacity: ${document.getElementById('brushOpacitySlider').value}%`;
+        }
+
+        function setActiveToolStyle(toolType) {
+            currentSelectedToolType = toolType;
+            ['line', 'brush', 'sketch', 'airbrush'].forEach(t => {
+                const button = document.getElementById(`tool-${t}`);
+                if(button) {
+                    button.className = t === toolType ? 'btn' : 'btn btn-secondary';
+                }
+            });
+            autoSaveWorkspaceData();
+        }
+
+        function updateBackgroundSettings() {
+            canvasBgColor = document.getElementById('bgColorPicker').value;
+            canvasBgImageElement = null;
+            canvasBgImageRawBase64 = null;
+            refreshMasterCanvasDisplay();
+            autoSaveWorkspaceData();
+        }
+
+        function handleBackgroundImageUpload() {
+            const file = document.getElementById('bgImageInput').files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                canvasBgImageRawBase64 = e.target.result;
+                const img = new Image();
+                img.onload = function() {
+                    canvasBgImageElement = img;
+                    refreshMasterCanvasDisplay();
+                    autoSaveWorkspaceData();
+                };
+                img.src = canvasBgImageRawBase64;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Procedural Layer Interface System Layout Generation
+        function renderLayerControlPanelUI() {
+            const container = document.getElementById('layerStackContainer');
+            container.innerHTML = '';
+
+            studioLayers.forEach((layer, index) => {
+                const item = document.createElement('div');
+                item.className = `layer-item ${layer.id === activeLayerId ? 'active' : ''}`;
+                item.onclick = () => { activeLayerId = layer.id; renderLayerControlPanelUI(); autoSaveWorkspaceData(); };
+
+                const mainRow = document.createElement('div');
+                mainRow.className = 'layer-main-row';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'layer-name';
+                nameSpan.innerText = `${index + 1}. ${layer.name}`;
+
+                const actions = document.createElement('div');
+                actions.className = 'layer-actions';
+
+                // Eye Toggle Visibility Control
+                const eyeBtn = document.createElement('button');
+                eyeBtn.className = 'btn btn-secondary';
+                eyeBtn.style.padding = '2px 6px'; eyeBtn.style.fontSize = '0.75rem';
+                eyeBtn.innerText = layer.visible ? '👁' : '❌';
+                eyeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    layer.visible = !layer.visible;
+                    renderLayerControlPanelUI();
+                    refreshMasterCanvasDisplay();
+                    autoSaveWorkspaceData();
+                };
+
+                // Trash Delete Control Layer Link
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-secondary btn-danger';
+                delBtn.style.padding = '2px 6px'; delBtn.style.fontSize = '0.75rem';
+                delBtn.innerText = '🗑';
+                delBtn.disabled = studioLayers.length <= 1;
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    studioLayers = studioLayers.filter(l => l.id !== layer.id);
+                    if (activeLayerId === layer.id) activeLayerId = studioLayers[0].id;
+                    renderLayerControlPanelUI();
+                    refreshMasterCanvasDisplay();
+                    autoSaveWorkspaceData();
+                };
+
+                actions.appendChild(eyeBtn);
+                actions.appendChild(delBtn);
+                mainRow.appendChild(nameSpan);
+                mainRow.appendChild(actions);
+                item.appendChild(mainRow);
+
+                // Behavior Selector Mode Component Dropdown Insertion
+                const dropdownDiv = document.createElement('div');
+                dropdownDiv.className = 'layer-dropdown-container';
+                dropdownDiv.onclick = (e) => e.stopPropagation(); // Avoid triggering layer selection on click
+
+                const selectLabel = document.createElement('label');
+                selectLabel.innerText = "Animation Entrance Mode:";
+
+                const selectorElement = document.createElement('select');
+                selectorElement.innerHTML = `
+                    <option value="trace" ${layer.behavior === 'trace' ? 'selected' : ''}>✒️ Draw / Trace</option>
+                    <option value="awaken" ${layer.behavior === 'awaken' ? 'selected' : ''}>👀 Awaken / Morph</option>
+                    <option value="pop" ${layer.behavior === 'pop' ? 'selected' : ''}>✨ Instant Pop Appearance</option>
+                `;
+                selectorElement.onchange = (e) => {
+                    layer.behavior = e.target.value;
+                    autoSaveWorkspaceData();
+                };
+
+                dropdownDiv.appendChild(selectLabel);
+                dropdownDiv.appendChild(selectorElement);
+                item.appendChild(dropdownDiv);
+
+                container.appendChild(item);
+            });
+        }
+
+        function addNewLayer() {
+            const label = prompt("Enter new layer designation label name:", `Layer ${studioLayers.length + 1}`);
+            if (!label) return;
+            const uid = 'layer_' + Date.now();
+            studioLayers.push({ id: uid, name: label, strokes: [], visible: true, behavior: 'trace' });
+            activeLayerId = uid;
+            renderLayerControlPanelUI();
+            autoSaveWorkspaceData();
+        }
+
+        function clearActiveLayerStrokes() {
+            const active = studioLayers.find(l => l.id === activeLayerId);
+            if (active) active.strokes = [];
+            refreshMasterCanvasDisplay();
+            autoSaveWorkspaceData();
+        }
+
+        function resetEntireStudioWorkspace() {
+            if(!confirm("Purge entire creative layout canvas?")) return;
+            localStorage.removeItem('art_studio_autosave_data');
+            studioLayers = [
+                { id: 'layer_1', name: 'Outline Layer', strokes: [], visible: true, behavior: 'trace' },
+                { id: 'layer_2', name: 'Awakening Details', strokes: [], visible: true, behavior: 'awaken' }
+            ];
+            activeLayerId = 'layer_1';
+            canvasBgColor = '#ffffff';
+            canvasBgImageElement = null;
+            canvasBgImageRawBase64 = null;
+            document.getElementById('bgImageInput').value = '';
+            document.getElementById('bgColorPicker').value = '#ffffff';
+            currentSelectedToolType = 'line';
+            initStudio();
+        }
+
+        function obtainRelativeCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: ((e.clientX - rect.left) / rect.width) * WIDTH,
+                y: ((e.clientY - rect.top) / rect.height) * HEIGHT
+            };
+        }
+
+        // Draw Engine Pipeline Matrix Interface Input Adapters
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const pos = obtainRelativeCanvasCoordinates(e);
+            activeInputPoints = [pos];
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const pos = obtainRelativeCanvasCoordinates(e);
+            activeInputPoints.push(pos);
+
+            refreshMasterCanvasDisplay();
+            executeBrushEngineStrokeDrawRender(activeInputPoints, {
+                tool: currentSelectedToolType,
+                color: document.getElementById('brushColorPicker').value,
+                size: parseInt(document.getElementById('brushSizeSlider').value),
+                opacity: parseInt(document.getElementById('brushOpacitySlider').value) / 100
+            });
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (activeInputPoints.length > 0) {
+                const targetLayer = studioLayers.find(l => l.id === activeLayerId);
+                if (targetLayer) {
+                    targetLayer.strokes.push({
+                        points: activeInputPoints,
+                        tool: currentSelectedToolType,
+                        color: document.getElementById('brushColorPicker').value,
+                        size: parseInt(document.getElementById('brushSizeSlider').value),
+                        opacity: parseInt(document.getElementById('brushOpacitySlider').value) / 100
+                    });
+                }
+            }
+            activeInputPoints = [];
+            refreshMasterCanvasDisplay();
+            autoSaveWorkspaceData();
+        });
+
+        // The Multi-Tool Brush Engine Rendering Pipeline
+        function executeBrushEngineStrokeDrawRender(points, properties) {
+            if (points.length === 0) return;
+            if (points.length < 2) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.fillStyle = properties.color;
+                ctx.globalAlpha = properties.opacity;
+                ctx.arc(points[0].x, points[0].y, properties.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                return;
+            }
+
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            if (properties.tool === 'line') {
+                ctx.beginPath();
+                ctx.strokeStyle = properties.color;
+                ctx.lineWidth = properties.size;
+                ctx.globalAlpha = properties.opacity;
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length - 1; i++) {
+                    const mx = (points[i].x + points[i + 1].x) / 2;
+                    const my = (points[i].y + points[i + 1].y) / 2;
+                    ctx.quadraticCurveTo(points[i].x, points[i].y, mx, my);
+                }
+                ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+                ctx.stroke();
+
+            } else if (properties.tool === 'brush') {
+                ctx.strokeStyle = properties.color;
+                ctx.globalAlpha = properties.opacity;
+                
+                for (let i = 1; i < points.length; i++) {
+                    ctx.beginPath();
+                    let progressFactor = i / points.length;
+                    let calculatedThickness = properties.size * Math.sin(progressFactor * Math.PI);
+                    if (calculatedThickness < 1) calculatedThickness = 1; 
+
+                    ctx.lineWidth = calculatedThickness;
+                    ctx.moveTo(points[i - 1].x, points[i - 1].y);
+                    ctx.lineTo(points[i].x, points[i].y);
+                    ctx.stroke();
+                }
+
+            } else if (properties.tool === 'sketch') {
+                ctx.strokeStyle = properties.color;
+                ctx.globalAlpha = properties.opacity * 0.4; 
+                ctx.lineWidth = Math.max(1, properties.size * 0.25);
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+
+                for (let i = 0; i < points.length; i += 2) {
+                    ctx.beginPath();
+                    let randomOffsetRadius = (Math.random() - 0.5) * properties.size;
+                    ctx.arc(points[i].x + randomOffsetRadius, points[i].y + randomOffsetRadius, 0.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+            } else if (properties.tool === 'airbrush') {
+                ctx.fillStyle = properties.color;
+                
+                for (let i = 1; i < points.length; i++) {
+                    let particleDensityCount = Math.floor(properties.size * 1.5);
+                    for (let p = 0; p < particleDensityCount; p++) {
+                        let angle = Math.random() * Math.PI * 2;
+                        let distanceRadius = Math.pow(Math.random(), 2) * (properties.size * 1.5);
+                        let px = points[i].x + Math.cos(angle) * distanceRadius;
+                        let py = points[i].y + Math.sin(angle) * distanceRadius;
+
+                        ctx.globalAlpha = properties.opacity * (1 - (distanceRadius / (properties.size * 1.5))) * 0.15;
+                        ctx.fillRect(px, py, 1.5, 1.5);
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function refreshMasterCanvasDisplay() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+            if (canvasBgImageElement) {
+                const scale = Math.max(WIDTH / canvasBgImageElement.width, HEIGHT / canvasBgImageElement.height);
+                const x = (WIDTH / 2) - (canvasBgImageElement.width / 2) * scale;
+                const y = (HEIGHT / 2) - (canvasBgImageElement.height / 2) * scale;
+                ctx.drawImage(canvasBgImageElement, x, y, canvasBgImageElement.width * scale, canvasBgImageElement.height * scale);
+            } else {
+                ctx.fillStyle = canvasBgColor;
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            }
+
+            studioLayers.forEach(layer => {
+                if (layer.visible) {
+                    layer.strokes.forEach(stroke => {
+                        executeBrushEngineStrokeDrawRender(stroke.points, stroke);
+                    });
+                }
+            });
+        }
+
+        // Procedural Advanced Multi-Layer Video Timeline Compiler
+        function compileAndExportMotionGraphics() {
+            let totalStrokesRecorded = studioLayers.reduce((sum, l) => sum + l.strokes.length, 0);
+            if(totalStrokesRecorded === 0) {
+                alert("Please paint artwork layers onto your studio design boards before triggering an export trace sequence.");
+                return;
+            }
+
+            const exportBtn = document.getElementById('renderExportBtn');
+            const indicator = document.getElementById('recording-indicator');
+            exportBtn.disabled = true;
+            exportBtn.innerText = "Compiling Advanced Video Timelines...";
+            indicator.style.display = "block";
+
+            const mediaStream = canvas.captureStream(60); 
+            const mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp9' });
+            const dynamicBinaryChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) dynamicBinaryChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const visualBlob = new Blob(dynamicBinaryChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(visualBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'custom_motion_graphic_wallpaper.webm';
+                a.click();
+
+                exportBtn.disabled = false;
+                exportBtn.innerText = "🎬 Export Wallpaper Video";
+                indicator.style.display = "none";
+                refreshMasterCanvasDisplay();
+            };
+
+            mediaRecorder.start();
+
+            const traceActionLayers = studioLayers.filter(l => l.behavior === 'trace');
+            const specialActionLayers = studioLayers.filter(l => l.behavior === 'awaken' || l.behavior === 'pop');
+
+            let currentLayerTimelineIdx = 0;
+            let currentStrokeTimelineIdx = 0;
+            let currentPointSegmentIdx = 0;
+
+            function processBackgroundTraceTimeline() {
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                if (canvasBgImageElement) {
+                    const scale = Math.max(WIDTH / canvasBgImageElement.width, HEIGHT / canvasBgImageElement.height);
+                    const x = (WIDTH / 2) - (canvasBgImageElement.width / 2) * scale;
+                    const y = (HEIGHT / 2) - (canvasBgImageElement.height / 2) * scale;
+                    ctx.drawImage(canvasBgImageElement, x, y, canvasBgImageElement.width * scale, canvasBgImageElement.height * scale);
+                } else {
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                }
+
+                for(let l = 0; l < currentLayerTimelineIdx; l++) {
+                    traceActionLayers[l].strokes.forEach(s => executeBrushEngineStrokeDrawRender(s.points, s));
+                }
+
+                specialActionLayers.forEach(layer => {
+                    if (layer.behavior === 'awaken') {
+                        layer.strokes.forEach(stroke => {
+                            if (stroke.points.length > 1) {
+                                ctx.save();
+                                let centerY = stroke.points.reduce((sum, p) => sum + p.y, 0) / stroke.points.length;
+                                let lockedFlatPoints = stroke.points.map(p => ({ x: p.x, y: centerY }));
+                                executeBrushEngineStrokeDrawRender(lockedFlatPoints, stroke);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                });
+
+                if (currentLayerTimelineIdx < traceActionLayers.length) {
+                    const activeLayer = traceActionLayers[currentLayerTimelineIdx];
+
+                    for(let s = 0; s < currentStrokeTimelineIdx; s++) {
+                        executeBrushEngineStrokeDrawRender(activeLayer.strokes[s].points, activeLayer.strokes[s]);
+                    }
+
+                    if(activeLayer.strokes.length > 0 && currentStrokeTimelineIdx < activeLayer.strokes.length) {
+                        const activeStroke = activeLayer.strokes[currentStrokeTimelineIdx];
+                        const slicedIncrementalPoints = activeStroke.points.slice(0, currentPointSegmentIdx + 1);
+                        
+                        executeBrushEngineStrokeDrawRender(slicedIncrementalPoints, activeStroke);
+                        currentPointSegmentIdx += 4; 
+                        
+                        if(currentPointSegmentIdx >= activeStroke.points.length) {
+                            currentStrokeTimelineIdx++;
+                            currentPointSegmentIdx = 0;
+                        }
+                    } else {
+                        currentLayerTimelineIdx++;
+                        currentStrokeTimelineIdx = 0;
+                        currentPointSegmentIdx = 0;
+                    }
+                    requestAnimationFrame(processBackgroundTraceTimeline);
+                } else {
+                    executeCinematicSpecialBehaviorsFinale(specialActionLayers, mediaRecorder);
+                }
+            }
+
+            processBackgroundTraceTimeline();
+        }
+
+        function executeCinematicSpecialBehaviorsFinale(specialLayers, finalRecorderTarget) {
+            let frameTimer = 0;
+            const PAUSE_HOLD_FRAMES = 15;
+            const MORPH_GROWTH_FRAMES = 20;
+            const STATIC_WINDOW_HOLD_FRAMES = 80;
+
+            function renderSpecialBehaviorsLoop() {
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                if (canvasBgImageElement) {
+                    const scale = Math.max(WIDTH / canvasBgImageElement.width, HEIGHT / canvasBgImageElement.height);
+                    const x = (WIDTH / 2) - (canvasBgImageElement.width / 2) * scale;
+                    const y = (HEIGHT / 2) - (canvasBgImageElement.height / 2) * scale;
+                    ctx.drawImage(canvasBgImageElement, x, y, canvasBgImageElement.width * scale, canvasBgImageElement.height * scale);
+                } else {
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                }
+
+                studioLayers.forEach(layer => {
+                    if (layer.behavior === 'trace') {
+                        layer.strokes.forEach(s => executeBrushEngineStrokeDrawRender(s.points, s));
+                    }
+                });
+
+                if (frameTimer < PAUSE_HOLD_FRAMES) {
+                    specialLayers.forEach(layer => {
+                        if (layer.behavior === 'awaken') {
+                            layer.strokes.forEach(stroke => {
+                                if (stroke.points.length > 1) {
+                                    let centerY = stroke.points.reduce((sum, p) => sum + p.y, 0) / stroke.points.length;
+                                    let lockedFlatPoints = stroke.points.map(p => ({ x: p.x, y: centerY }));
+                                    executeBrushEngineStrokeDrawRender(lockedFlatPoints, stroke);
+                                }
+                            });
+                        }
+                    });
+                    frameTimer++;
+                    requestAnimationFrame(renderSpecialBehaviorsLoop);
+                } 
+                else if (frameTimer < PAUSE_HOLD_FRAMES + MORPH_GROWTH_FRAMES) {
+                    let interpolationFactor = (frameTimer - PAUSE_HOLD_FRAMES) / MORPH_GROWTH_FRAMES;
+                    specialLayers.forEach(layer => {
+                        if (layer.behavior === 'awaken') {
+                            layer.strokes.forEach(stroke => {
+                                if (stroke.points.length > 1) {
+                                    let centerY = stroke.points.reduce((sum, p) => sum + p.y, 0) / stroke.points.length;
+                                    let morphedPoints = stroke.points.map(p => ({
+                                        x: p.x,
+                                        y: centerY + (p.y - centerY) * interpolationFactor
+                                    }));
+                                    executeBrushEngineStrokeDrawRender(morphedPoints, stroke);
+                                }
+                            });
+                        }
+                    });
+                    frameTimer++;
+                    requestAnimationFrame(renderSpecialBehaviorsLoop);
+                } 
+                else if (frameTimer < PAUSE_HOLD_FRAMES + MORPH_GROWTH_FRAMES + STATIC_WINDOW_HOLD_FRAMES) {
+                    specialLayers.forEach(layer => {
+                        layer.strokes.forEach(s => executeBrushEngineStrokeDrawRender(s.points, s));
+                    });
+                    frameTimer++;
+                    requestAnimationFrame(renderSpecialBehaviorsLoop);
+                } else {
+                    finalRecorderTarget.stop();
+                }
+            }
+
+            renderSpecialBehaviorsLoop();
+        }
+
+        window.onload = initStudio;
+    </script>
+</body>
+</html>
